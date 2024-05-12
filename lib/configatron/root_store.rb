@@ -62,31 +62,44 @@ class Configatron::RootStore < BasicObject
     @store = ::Configatron::Store.new(self)
   end
 
-  def temp(&block)
-    temp_start
-
+  def temp(marshal: false, &block)
+    # Marshal.load( Marshal.dump(a) )
+    temp_start(marshal: marshal)
     begin
       yield
     ensure
-      temp_end
+      temp_end(marshal: marshal)
     end
   end
 
-  def temp_start
+  def temp_start(marshal: false)
     @temp_cow = @cow
 
     # Just need to have a unique Copy-on-Write generation ID
     @cow = @@cow += 1
 
     @temporary_locks.push(@locked)
-    @temporary_states.push(@store)
+
+    possibly_marshaled_store = if marshal
+      ::Marshal.dump(@store)
+    else
+      @store
+    end
+    @temporary_states.push(possibly_marshaled_store)
   end
 
-  def temp_end
+  def temp_end(marshal: false)
     @cow = @temp_cow
 
     @locked = @temporary_locks.pop
-    @store = @temporary_states.pop
+
+    possibly_marshaled_store = if marshal
+      ::Marshal.load(@temporary_states.pop)
+    else
+      @temporary_states.pop
+    end
+
+    @store = possibly_marshaled_store
   end
 
   def locked?
