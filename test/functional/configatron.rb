@@ -9,6 +9,20 @@ class Critic::Functional::ConfigatronTest < Critic::Functional::Test
     before do
       @kernel.a = 'A'
       @kernel.b = 'B'
+      @kernel.hash = {key: 'value'}
+    end
+
+    it 'allows for temporary setting of hash values' do
+      assert_equal({key: 'value'}, @kernel.hash)
+      assert_equal('value', @kernel.hash[:key])
+      assert_equal(nil, @kernel.hash[:another_key])
+
+      @kernel.temp(marshal: true) do
+        @kernel.hash[:another_key] = 'another_value'
+        assert_equal('another_value', @kernel.hash[:another_key])
+      end
+
+      assert_equal(nil, @kernel.hash[:another_key])
     end
 
     it 'allows for temporary setting of values' do
